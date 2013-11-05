@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include <omp.h>
 #include <windows.h>
-#include <shlobj.h>
-#include <stdlib.h>
-#include <math.h>
+#include <process.h>
 
 int main()
 {
+	//testSearch();
+
+	/*
 	int NUM_THREADS = omp_get_num_procs();
 	
 	printf("私のプロセッサ数は%dです\n", NUM_THREADS);
 	Sleep(5000);
 	return 0;
+	*/
 
 	/*
 #pragma omp parallel
@@ -98,33 +100,41 @@ unsigned __stdcall pSearch(LPVOID pArg)
 	if(tNum == (NUM_THREADS - 1)) end = N;
 	
 	LinearPSearch(A, start, end, key, &pos);
-	delete inArg; //メモリ解放
+	//delete inArg; //メモリ解放
+	free(inArg); //メモリ開放（deleteの代わり）
 	ExitThread(pos); //スレッドを終了する
 }
 
 
-/*
-	// act5
-for(i = 0; i < NUM_THREADS; i++)
+
+void testSearch(int *S, int NumKeys, int sKey, int i, int *position)
 {
-	sParam *pArg = new sParam;
-	pArg->A = S;
-	pArg->num = NumKeys;
-	pArg->key = skey;
-	pArg->threadID = i;
-	tH[i] = (HANDLE) _beginthreadex(NULL, 0, pSearch, (LPVOID)pArg, 0, NULL);
-}
+	int NUM_THREADS = omp_get_num_procs();
+	HANDLE tH[1024];
 
-WaitForMultipleObjects(NUM_THREADS, tH, TRUE, INFINITE);
-
-for(i = 0; i < NUM_THREAD; i++){
-	GetExitCodeThread(tH[i], (LPWORD)position);
-	if(*position != -1){
-		printf("key = %d found at index %d\n", sKey, *position);
-		break;
+	for(i = 0; i < NUM_THREADS; i++)
+	{
+		sParam *pArg = new sParam;
+		pArg->A = S;
+		pArg->num = NumKeys;
+		pArg->key = sKey;
+		pArg->threadID = i;
+		//スレッドを作る。
+		//３番目はスレッド関数のアドレスを、４番目がスレッド関数に渡す引数
+		//５番目は0ですぐ実行とする
+		tH[i] = (HANDLE) _beginthreadex(NULL, 0, pSearch, (LPVOID)pArg, 0, NULL);
 	}
-}
-if(*position == -1) printf("key = %d NOT found.\n", sKey);
 
+	//アラート可能な待機状態に入る
+	WaitForMultipleObjects(NUM_THREADS, tH, TRUE, INFINITE);
+
+	for(i = 0; i < NUM_THREADS; i++){
+		// LPDWORDはDWORD型へのポインタである
+		GetExitCodeThread(tH[i], (LPDWORD)position);
+		if(*position != -1){
+			printf("key = %d found at index %d\n", sKey, *position);
+			break;
+		}
+	}
+	if(*position == -1) printf("key = %d NOT found.\n", sKey);
 }
-*/
