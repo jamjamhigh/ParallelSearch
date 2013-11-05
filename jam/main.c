@@ -10,7 +10,7 @@ int main()
 	/*
 	int NUM_THREADS = omp_get_num_procs();
 	
-	printf("���̃v���Z�b�T����%d�ł�\n", NUM_THREADS);
+	printf("私のプロセッサ数は%dです\n", NUM_THREADS);
 	Sleep(5000);
 	return 0;
 	*/
@@ -24,26 +24,26 @@ int main()
 }
 
 
-// �\����
+// 構造体
 typedef struct{
-	int *A; //�����z��
-	int num; //������
-	int key; //�T������
-	int threadID; //�X���b�h�̐�
+	int *A; //文字配列
+	int num; //文字数
+	int key; //探す文字
+	int threadID; //スレッドの数
 } sParam;
-//���̍\���̖̂��O�́usParam�v
+//この構造体の名前は「sParam」
 
-BOOL Done = FALSE; //�T�[�`�I����ʒm���邽�߂̃O���[�o���t���O
+BOOL Done = FALSE; //サーチ終了を通知するためのグローバルフラグ
 
 
-// ���\�[�g�f�[�^���T�[�`����֐�
-// A:�����z��@N:�������@key:�T�[�`���镶���@position:�ڎ�
+// 未ソートデータをサーチする関数
+// A:文字配列　N:文字数　key:サーチする文字　position:目次
 void LinearSearch(int *A, int N, int key, int *position)
 {
 	int i;
-	*position = -1; // ������Ȃ��ꍇ��-1
+	*position = -1; // 見つからない場合は-1
 	
-	#pragma omp parallel for // for���̕��s���������s��
+	#pragma omp parallel for // for文の並行化処理を行う
 	for(i = 0; i < N; i++){
 		if(A[i] == key){
 			*position = i;
@@ -52,37 +52,37 @@ void LinearSearch(int *A, int N, int key, int *position)
 }
 
 
-//���j�A�T�[�`�֐��i�ォ�牺�܂ŏ��ɂ���������֐��j
+//リニアサーチ関数（上から下まで順にを検索する関数）
 /* 
-A:�����z��@s:���ׂ�X�^�[�g�ʒu�@e:���׏I���ʒu�@key:�T�[�`���镶���@position:�ڎ�
-DWORD�Ƃ͂��Ƃ���unsigned long�̌^�̂��Ƃł���
-int�̑���Ɏg���Ă��邪�c�c�Ȃ��H
+A:文字配列　s:調べるスタート位置　e:調べ終わる位置　key:サーチする文字　position:目次
+DWORDとはもともとunsigned longの型のことである
+intの代わりに使われているが……なぜ？
 */
 void LinearPSearch(int *A, int s, int e, int key, DWORD *position)
 {	
 	int i;
 	
 	for(i = s; i < e; i++){
-		if(Done) return; //�����T�[�`���I�����Ă���Ȃ�ΏI��
-		if(A[i] == key){ //���������ꍇ
-			*position = i; //���̃|�C���^�̖ڎ��������������ԍ��ɂ���
-			Done = TRUE; //���������t���O��^�ɂ���
-			break; //�J��Ԃ��I��
+		if(Done) return; //もしサーチが終了しているならば終了
+		if(A[i] == key){ //見つかった場合
+			*position = i; //そのポインタの目次を見つけた文字番号にする
+			Done = TRUE; //見つかったフラグを真にする
+			break; //繰り返し終了
 		}
 	}
 	return;
 }
 
 
-//�w���p�֐�
+//ヘルパ関数
 /*
-����LinerPSearch���g���Ă���B
-�p�����[�^�[�i�\���̂ɂ���ϐ��Ȃǁj��W�J����������j�A�T�[�`�֐��֓n���Č��ʂ𗘗p�\�ɂ���B
-����ɏo�Ă���LPVOID�Ƃ́A������^�̃f�[�^�ւ̃|�C���^�ł���B
+中でLinerPSearchを使っている。
+パラメーター（構造体にある変数など）を展開しそれをリニアサーチ関数へ渡して結果を利用可能にする。
+直後に出てくるLPVOIDとは、あらゆる型のデータへのポインタである。
 */
 unsigned __stdcall pSearch(LPVOID pArg)
 {
-	// �󂯎�����\���̂��|�C���^���Ƃɓ��Ă͂߂Ă���
+	// 受け取った構造体をポインタごとに当てはめている
 	sParam *inArg = (sParam *)pArg;
 	int *A = inArg->A;
 	int N = inArg->num;
@@ -92,17 +92,17 @@ unsigned __stdcall pSearch(LPVOID pArg)
 	int start, end;
 	DWORD pos = -1;
 
-	// �v���Z�b�T�����`�A���Ă͂߂�B�@�����Ŏg���Ă���֐���OpenMP�̂��́B
+	// プロセッサ数を定義、当てはめる。　ここで使っている関数はOpenMPのもの。
 	int NUM_THREADS = omp_get_num_procs();
 	
-	start = ((int)N/NUM_THREADS) * tNum; //�i���������v���Z�b�T���j�~�X���b�h��
+	start = ((int)N/NUM_THREADS) * tNum; //（文字数÷プロセッサ数）×スレッド数
 	end = ((int)N/NUM_THREADS) * (tNum+1);
 	if(tNum == (NUM_THREADS - 1)) end = N;
 	
 	LinearPSearch(A, start, end, key, &pos);
-	//delete inArg; //���������
-	free(inArg); //�������J���idelete�̑���j
-	ExitThread(pos); //�X���b�h���I������
+	//delete inArg; //メモリ解放
+	free(inArg); //メモリ開放（deleteの代わり）
+	ExitThread(pos); //スレッドを終了する
 }
 
 
@@ -119,17 +119,17 @@ void testSearch(int *S, int NumKeys, int sKey, int i, int *position)
 		pArg->num = NumKeys;
 		pArg->key = sKey;
 		pArg->threadID = i;
-		//�X���b�h�����B
-		//�R�Ԗڂ̓X���b�h�֐��̃A�h���X���A�S�Ԗڂ��X���b�h�֐��ɓn������
-		//�T�Ԗڂ�0�ł������s�Ƃ���
+		//スレッドを作る。
+		//３番目はスレッド関数のアドレスを、４番目がスレッド関数に渡す引数
+		//５番目は0ですぐ実行とする
 		tH[i] = (HANDLE) _beginthreadex(NULL, 0, pSearch, (LPVOID)pArg, 0, NULL);
 	}
 
-	//�A���[�g�\�ȑҋ@��Ԃɓ���
+	//アラート可能な待機状態に入る
 	WaitForMultipleObjects(NUM_THREADS, tH, TRUE, INFINITE);
 
 	for(i = 0; i < NUM_THREADS; i++){
-		// LPDWORD��DWORD�^�ւ̃|�C���^�ł���
+		// LPDWORDはDWORD型へのポインタである
 		GetExitCodeThread(tH[i], (LPDWORD)position);
 		if(*position != -1){
 			printf("key = %d found at index %d\n", sKey, *position);
