@@ -3,9 +3,23 @@
 #include <windows.h>
 #include <process.h>
 
+
+void testSearch(int *S, int NumKeys, int sKey, int i);
+
 int main()
 {
-	//testSearch();
+	int i;
+	int *num; // さーちするもの
+	int numnum = 1000000; //どれだけサーチするか
+	int numkey = 24; //調べる番号
+	int threads = 1; // スレッド数
+
+	for(i = 0; i < numnum; i++)
+	{
+		num[i] = rand();
+	}
+
+	testSearch(num, numnum, numkey, threads);
 
 	/*
 	int NUM_THREADS = omp_get_num_procs();
@@ -16,7 +30,7 @@ int main()
 	*/
 
 	/*
-#pragma omp parallel
+	#pragma omp parallel
 	printf("Hello!\n");
 	Sleep(5000);
 	return 0;
@@ -107,10 +121,13 @@ unsigned __stdcall pSearch(LPVOID pArg)
 
 
 
-void testSearch(int *S, int NumKeys, int sKey, int i, int *position)
+void testSearch(int *S, int NumKeys, int sKey, int i)
 {
 	int NUM_THREADS = omp_get_num_procs();
-	HANDLE tH[1024];
+	HANDLE tH[24];
+
+	int *position; // 結果を返すための目次
+	*position = -1; // 見つからない場合は-1なので最初は-1
 
 	for(i = 0; i < NUM_THREADS; i++)
 	{
@@ -121,7 +138,7 @@ void testSearch(int *S, int NumKeys, int sKey, int i, int *position)
 		pArg->threadID = i;
 		//スレッドを作る。
 		//３番目はスレッド関数のアドレスを、４番目がスレッド関数に渡す引数
-		//５番目は0ですぐ実行とする
+		//５番目は0ですぐ実行とするD
 		tH[i] = (HANDLE) _beginthreadex(NULL, 0, pSearch, (LPVOID)pArg, 0, NULL);
 	}
 
@@ -138,3 +155,4 @@ void testSearch(int *S, int NumKeys, int sKey, int i, int *position)
 	}
 	if(*position == -1) printf("key = %d NOT found.\n", sKey);
 }
+
